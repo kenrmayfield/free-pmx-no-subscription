@@ -1,0 +1,11 @@
+Package: free-pmx-no-subscription
+Version: 0.1.0
+Section: utils
+Priority: optional
+Architecture: all
+Maintainer: free-pmx <179050296+free-pmx@users.noreply.github.com>
+Description: No-subscription auto-configuration for Proxmox product suite
+ Disables default and sets up no-subscription repositories,
+ fetches Proxmox release key, eliminates 'No valid subscription notice.'
+ Configuration allows for feature control and is retained between upgrades.
+Homepage: https://free-pmx.pages.dev

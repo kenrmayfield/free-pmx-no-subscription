@@ -1,0 +1,88 @@
+#!/bin/bash
+set -o pipefail
+
+echo "free-pmx: NO VALID SUBSCRIPTION NOTICE REMOVAL"
+
+status=0
+
+config="/etc/free-pmx/no-subscription.conf"
+[[ -f $config ]] && source "$config"
+
+lib="/usr/lib/free-pmx"
+_no_nag_patch="$lib/no-nag-patch"
+
+proxmoxlib="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js"
+
+case "$FREE_PMX_NO_NAG" in
+
+    manual|auto)
+    ;;
+
+    prohibit)
+        echo "Prohibited by configuration: $config" >&2
+        exit $status
+    ;;
+
+    *)
+        echo "Configuration invalid or missing: $config" >&2
+        exit 1
+    ;;
+
+esac
+
+case "$1" in
+
+    "")
+    ;;
+
+    auto-configure|auto-triggered)
+        if [[ $FREE_PMX_NO_NAG != "auto" ]]; then
+            echo "Automatic patching NOT configured: $config"
+            exit $status
+        fi
+    ;;
+
+    *)
+        echo "Invalid argument." >&2
+        exit 1
+    ;;
+
+esac
+
+if [[ ! -f $proxmoxlib ]]; then
+    echo "File to patch not present: $proxmoxlib"
+    exit 1;
+fi
+
+case "$1" in
+
+    "")
+        cp "$proxmoxlib"{,.bak} 2> /dev/null || echo "Unable to make a '.bak' copy: $proxmoxlib" >&2
+    ;;
+
+    auto-configure|auto-triggered)
+        cp "$proxmoxlib"{,.original} 2> /dev/null || echo "Unable to make a '.original' copy: $proxmoxlib" >&2
+    ;;
+
+esac
+
+echo "Patching: $proxmoxlib"
+
+checksum_prior=$(sha512sum "$proxmoxlib" 2> /dev/null | awk '{print $1}') || unset checksum_prior
+$_no_nag_patch "$proxmoxlib" 2> /dev/null
+checksum_after=$(sha512sum "$proxmoxlib" 2> /dev/null | awk '{print $1}') || unset checksum_after
+
+if [[ -z $checksum_prior ]]; then
+    echo "Could not calculate checksum prior - result unknown."
+    status=1
+elif [[ -z $checksum_after ]]; then
+    echo "Could not calculate checksum after - result unknown."
+    status=1
+elif [[ $checksum_prior != "$checksum_after" ]]; then
+    echo "Patch successfully applied."
+else
+    echo "Patch had no effect. Already been patched?"
+    status=1
+fi
+
+exit $status

@@ -1,0 +1,28 @@
+#!/bin/bash
+set -o pipefail
+
+status=0
+
+[[ -n $1 ]] && codename=$1 || exit 1
+
+repo_key="/etc/apt/trusted.gpg.d/proxmox-release-$codename.gpg"
+repo_key_url="https://enterprise.proxmox.com/debian/proxmox-release-$codename.gpg"
+
+echo -n "Checking for Proxmox release key ($codename) ... "
+
+if [[ -f $repo_key ]]; then
+    echo "already present:"
+else 
+    echo -n "not present, retrieving... "
+    if wget -q "$repo_key_url" -O "$repo_key" 2> /dev/null; then
+        echo "retrieved:"
+    else
+        echo "unable to retrieve or store key." >&2
+        status=1
+    fi
+fi
+
+gpg --no-options --show-keys "$repo_key" 2> /dev/null || { echo "Unable to display key details." >&2; status=1; }
+sha512sum "$repo_key" 2> /dev/null | awk '{print "sha512 " $1}' || { echo "Unable to display checksum." >&2; status=1; }
+
+exit $status

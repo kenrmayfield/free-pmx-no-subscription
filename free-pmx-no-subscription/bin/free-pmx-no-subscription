@@ -1,0 +1,122 @@
+#!/bin/bash
+
+echo "free-pmx: NO-SUBSCRIPTION REPOSITORIES SETUP"
+
+status=0
+
+osrelease="/etc/os-release"
+[[ -f $osrelease ]] && source "$osrelease"
+
+config="/etc/free-pmx/no-subscription.conf"
+[[ -f $config ]] && source "$config"
+
+lib="/usr/lib/free-pmx"
+_repo_list_replace="$lib/repo-list-replace"
+_repo_key_check="$lib/repo-key-check"
+
+list_d="/etc/apt/sources.list.d"
+list_pve="$list_d/pve-enterprise.list"
+list_pbs="$list_d/pbs-enterprise.list"
+list_ceph="$list_d/ceph.list"
+new_list_pve="$list_d/pve-no-subscription.list"
+new_list_pbs="$list_d/pbs-no-subscription.list"
+new_list_ceph="$list_d/ceph-no-subscription.list"
+
+new_source_pve="deb http://download.proxmox.com/debian/pve $VERSION_CODENAME pve-no-subscription"
+new_source_pbs="deb http://download.proxmox.com/debian/pbs $VERSION_CODENAME pbs-no-subscription"
+new_source_ceph="deb http://download.proxmox.com/debian/ceph-$FREE_PMX_CEPH $VERSION_CODENAME no-subscription"
+
+setup_pve=0
+setup_pbs=0
+setup_ceph=0
+
+case "$FREE_PMX_NO_SUBSCRIPTION" in
+
+    manual|auto)
+    ;;
+
+    prohibit)
+        echo "Prohibited by configuration: $config" >&2
+        exit $status
+    ;;
+
+    *)
+        echo "Configuration invalid or missing: $config" >&2
+        exit 1
+    ;;
+
+esac
+
+case "$1" in
+
+    ""|pve|pbs|ceph)
+    ;;
+
+    auto-configure|auto-triggered-pve|auto-triggered-pbs)
+        if [[ $FREE_PMX_NO_SUBSCRIPTION != "auto" ]]; then
+            echo "Automatic repository setup NOT configured: $config"
+            exit $status
+        fi
+    ;;
+
+    *)
+        echo "Invalid argument." >&2
+        exit 1
+    ;;
+
+esac
+
+case "$1" in
+
+    ""|auto-configure)
+        echo "Detecting default lists..."
+        test -f "$list_pve" && setup_pve=1
+        test -f "$list_pbs" && setup_pbs=1
+        test -f "$list_ceph" && setup_ceph=1
+    ;;
+
+    pve|auto-triggered-pve)
+        echo "Requested for PVE list..."
+        setup_pve=1
+    ;;
+
+    pbs|auto-triggered-pbs)
+        echo "Requested for PBS list..."
+        setup_pbs=1
+    ;;
+
+    ceph)
+        echo "Requested for CEPH list..."
+        setup_ceph=1
+    ;;
+
+esac
+
+done_count=0
+todo_count=$(( setup_pve + setup_pbs + setup_ceph ))
+
+if [[ $todo_count -gt 0 ]]; then
+
+    if [[ -z $VERSION_CODENAME ]]; then
+        echo "VERSION_CODENAME not set, aborting."
+        exit 1
+    fi
+
+    if [[ $setup_ceph == 1 ]] && [[ -z $FREE_PMX_CEPH ]]; then
+        setup_ceph=0
+        echo "FREE_PMX_CEPH not configured, skipping."
+    fi
+
+    [[ $setup_pve -eq 1 ]] && $_repo_list_replace "$list_pve" "$new_list_pve" "$new_source_pve" && (( done_count++ ))
+    [[ $setup_pbs -eq 1 ]] && $_repo_list_replace "$list_pbs" "$new_list_pbs" "$new_source_pbs" && (( done_count++ ))
+    [[ $setup_ceph -eq 1 ]] && $_repo_list_replace "$list_ceph" "$new_list_ceph" "$new_source_ceph" && (( done_count++ ))
+    [[ done_count -ne todo_count ]] && status=1
+
+    echo "Completed total $done_count of $todo_count."
+
+    $_repo_key_check "$VERSION_CODENAME" || { echo "Failed key check." >&2; status=1; }
+else
+    echo "Nothing to be set up."
+fi
+
+exit $status

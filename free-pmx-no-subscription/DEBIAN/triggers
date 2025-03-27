@@ -1,0 +1,3 @@
+interest-noawait /etc/apt/sources.list.d/pve-enterprise.list
+interest-noawait /etc/apt/sources.list.d/pbs-enterprise.list
+interest-noawait /usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js
