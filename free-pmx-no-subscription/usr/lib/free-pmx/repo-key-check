@@ -22,7 +22,7 @@ else
     fi
 fi
 
-gpg --no-options --show-keys "$repo_key" 2> /dev/null || { echo "Unable to display key details." >&2; status=1; }
+GNUPGHOME=$(mktemp -d /tmp/gnupg-XXXXXX) gpg --show-keys "$repo_key" 2> /dev/null || { echo "Unable to display key details." >&2; status=1; }
 sha512sum "$repo_key" 2> /dev/null | awk '{print "sha512 " $1}' || { echo "Unable to display checksum." >&2; status=1; }
 
 exit $status

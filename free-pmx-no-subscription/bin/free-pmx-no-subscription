@@ -96,13 +96,12 @@ done_count=0
 todo_count=$(( setup_pve + setup_pbs + setup_ceph ))
 
 if [[ $todo_count -gt 0 ]]; then
-
     if [[ -z $VERSION_CODENAME ]]; then
         echo "VERSION_CODENAME not set, aborting."
         exit 1
     fi
 
-    if [[ $setup_ceph == 1 ]] && [[ -z $FREE_PMX_CEPH ]]; then
+    if [[ $setup_ceph -eq 1 ]] && [[ -z $FREE_PMX_CEPH ]]; then
         setup_ceph=0
         echo "FREE_PMX_CEPH not configured, skipping."
     fi
@@ -114,7 +113,7 @@ if [[ $todo_count -gt 0 ]]; then
 
     echo "Completed total $done_count of $todo_count."
 
-    $_repo_key_check "$VERSION_CODENAME" || { echo "Failed key check." >&2; status=1; }
+    $_repo_key_check "$VERSION_CODENAME" || { echo "Failed Proxmox release key check." >&2; status=1; }
 else
     echo "Nothing to be set up."
 fi
