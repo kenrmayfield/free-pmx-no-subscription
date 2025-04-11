@@ -1,0 +1,143 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+
+declare_common() {
+
+      declare -rg NS_CONFIG="/etc/free-pmx/no-subscription.conf"
+
+}
+
+declare_apt_lists() {
+
+      declare -rg ORD_LIST_IDS=("pve" "pbs" "pmg" "ceph")
+
+      declare -r list_d="/etc/apt/sources.list.d"
+
+      declare -rgA APT_LISTS=(
+            ["pve"]="$list_d/pve-enterprise.list"
+            ["pbs"]="$list_d/pbs-enterprise.list"
+            ["pmg"]="$list_d/pmg-enterprise.list"
+            ["ceph"]="$list_d/ceph.list"
+      )
+
+      declare -rgA APT_LISTS_NEW=(
+            ["pve"]="$list_d/pve-no-subscription.list"
+            ["pbs"]="$list_d/pbs-no-subscription.list"
+            ["pmg"]="$list_d/pmg-no-subscription.list"            
+            ["ceph"]="$list_d/ceph-no-subscription.list"
+      )
+
+}
+
+declare_ns_repos() {
+
+      declare -i err=0
+
+      DEBIAN=$( source "/etc/os-release" 2> /dev/null ||:; echo "$VERSION_CODENAME"; )
+      [[ -z $DEBIAN ]] && { echo "Could not determine Debian version codename."; return $(( err | 1 )); }
+
+      [[ -z $FREE_PMX_CEPH ]] && err=$(( err | 2 ))
+
+      declare -rgA NS_REPOS=(
+            ["pve"]="deb http://download.proxmox.com/debian/pve $DEBIAN pve-no-subscription"
+            ["pbs"]="deb http://download.proxmox.com/debian/pbs $DEBIAN pbs-no-subscription"
+            ["pmg"]="deb http://download.proxmox.com/debian/pmg $DEBIAN pmg-no-subscription"
+            ["ceph"]="deb http://download.proxmox.com/debian/ceph-$FREE_PMX_CEPH $DEBIAN no-subscription"
+      )
+
+      declare -rg REPOS_KEY_LOCAL="/etc/apt/trusted.gpg.d/proxmox-release-$DEBIAN.gpg"
+      declare -rg REPOS_KEY_ORIGIN="https://enterprise.proxmox.com/debian/proxmox-release-$DEBIAN.gpg"
+
+      return $err
+
+}
+
+declare_patchdefs() {
+
+      declare -i err=0
+
+      declare -rga AVAIL_PATCH_TARGETS=(
+            "/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js"
+            "/usr/share/pve-manager/js/pvemanagerlib.js"
+            "/usr/share/javascript/proxmox-backup/js/proxmox-backup-gui.js"
+            "/usr/share/javascript/pmg-gui/js/pmgmanagerlib.js"
+      )
+
+      declare -rg PATCHDEF_DIR="/usr/share/free-pmx/no-nag-patchdefs"
+
+      declare -ga ORD_PATCHDEF_IDS=()
+      declare -gA PATCHDEF_TARGETS
+
+      for p in "${PATCHDEF_DIR}/"*.patchdef; do
+            unset _PD_TGT_
+            raw() { return; }
+            source "$p" 2> /dev/null || { err=$(( err | 1 )); continue; }
+            unset raw
+            [ -z "$_PD_TGT_" ] && { err=$(( err | 2 )); continue; }
+
+            if [[ "$p" =~ ^${PATCHDEF_DIR}/(.*)\.patchdef ]]; then            
+                  declare m=${BASH_REMATCH[1]}
+                  ORD_PATCHDEF_IDS+=("$m")
+                  PATCHDEF_TARGETS["$m"]="$_PD_TGT_" 
+            fi
+      done
+
+      declare -r ORD_PATCHDEF_IDS
+      declare -r PATCHDEF_TARGETS
+
+      return $err
+
+}
+
+init() {
+
+      declare -r conf_opt_check="$1"
+      shift
+
+      declare_common
+
+      source "$NS_CONFIG" 2> /dev/null ||:
+
+      declare -gi O_AUTORUN=0
+      declare -g O_TARGET=''
+      declare -ga ARGS=()
+
+      declare -i opt_t_multiple=0
+      declare -i opt_invalid=0
+
+      while getopts ":at:" opt; do
+      case "$opt" in
+            a) O_AUTORUN=1;;
+            t) [[ -z $O_TARGET ]] || opt_t_multiple=1; O_TARGET=$OPTARG;;
+            *) opt_invalid=1;;
+      esac
+      done
+
+      case "${!conf_opt_check}" in
+      prohibit)
+            { echo "Prohibited by configuration: $NS_CONFIG" >&2; exit; };;
+      manual)
+            (( O_AUTORUN == 0 )) \
+            || { echo "Not configured to auto-run - option '$conf_opt_check': $NS_CONFIG" >&2; exit; };;
+      auto)
+            (( O_AUTORUN == 1 )) \
+            && echo "Automatic run.";;
+      *)
+            { echo "Configuration invalid or missing: $NS_CONFIG" >&2; exit 1; };;
+      esac
+
+      (( opt_t_multiple == 0 )) \
+      || { echo "Multiple '-t' options not supported."; exit 1; }
+      (( opt_invalid == 0 )) \
+      || { echo "Invalid command option." >&2; exit 1; }
+
+      { shift $((OPTIND-1)); while (($# > 0)); do ARGS+=("$1"); shift; done; }
+
+      declare -r O_AUTORUN
+      declare -r O_TARGET
+      declare -r ARGS
+
+}
+
+run_rl_replace() { /usr/lib/free-pmx/repo-list-replace "$@"; }
+run_rk_check() { /usr/lib/free-pmx/repo-key-check "$@"; }
+run_pd_apply() { /usr/lib/free-pmx/patchdef-apply "$@"; }

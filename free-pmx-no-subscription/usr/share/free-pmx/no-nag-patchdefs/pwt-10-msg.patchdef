@@ -1,9 +1,13 @@
-#!/usr/bin/perl -pi
+# Patch definition for free-pmx-no-nag
+# Source: proxmox-widget-toolkit/src/Utils.js
 
-use strict;
-use warnings;
+_PD_DISP_="Common popup notice"
 
-my $o = quotemeta << 'EOF';
+_PD_PKG_="proxmox-widget-toolkit"
+
+_PD_TGT_="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js"
+
+raw _PD_ORIG_ << 'EOF'
     checked_command: function(orig_cmd) {
 	Proxmox.Utils.API2Request(
 	    {
@@ -37,7 +41,7 @@ my $o = quotemeta << 'EOF';
     },
 EOF
 
-my $r = << 'EOF';
+raw _PD_REPL_ << 'EOF'
     checked_command: function(orig_cmd) {
 	Proxmox.Utils.API2Request(
 	    {
@@ -54,4 +58,3 @@ my $r = << 'EOF';
     },
 EOF
 
-BEGIN { undef $/; } s/$o/$r/;

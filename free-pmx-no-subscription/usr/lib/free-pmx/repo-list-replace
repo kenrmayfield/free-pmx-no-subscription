@@ -1,26 +1,28 @@
 #!/bin/bash
 
-status=0
+# SPDX-License-Identifier: AGPL-3.0-only
 
-[[ -n $1 ]] && old_list=$1 || exit 1
-[[ -n $2 ]] && new_list=$2 || exit 1
-[[ -n $3 ]] && new_source=$3 || exit 1
+declare -i status=0
+
+[[ -n $1 ]] && declare -r old_list=$1 || exit 1
+[[ -n $2 ]] && declare -r new_list=$2 || exit 1
+[[ -n $3 ]] && declare -r new_source=$3 || exit 1
 
 if [[ ! -f $old_list ]]; then
-    echo "Original not present: $old_list"
+    echo "~ Original not present: $old_list"
 elif mv "$old_list"{,.disabled} 2> /dev/null; then
-    echo "Disabled original: $old_list"
+    echo "+ Disabled original: $old_list"
 else
-    echo "Could not disable original: $old_list" >&2
+    echo "! Could not disable original: $old_list" >&2
     status=1
 fi
 
 if [[ -f $new_list ]]; then
-    echo "New NOT created - already present: $new_list"
-elif cat > "$new_list" <<< "$new_source"; then
-    echo "Created new: $new_list"
+    echo "~ New NOT created as already present: $new_list"
+elif { cat > "$new_list" <<< "$new_source"; } 2> /dev/null; then
+    echo "+ Created new: $new_list"
 else
-    echo "Could not create: $new_list" >&2
+    echo "! Could not create: $new_list" >&2
     status=1
 fi
 

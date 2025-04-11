@@ -1,6 +1,6 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Source: https://free-pmx.pages.dev
-Upstream-Name: No-subscription auto-configuration for Proxmox product suite
+Source: https://free-pmx.pages.dev/tools/free-pmx-no-subscription/
+Upstream-Name: No-subscription setup tool for Proxmox product suite
 
 Files:
  *
@@ -15,5 +15,5 @@ License: AGPL-3.0-only
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  GNU Affero General Public License for more details.
 
- You should have received a copy of the GNU Affero General Public License
- along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ For copy of the GNU Affero General Public License,
+ see <https://www.gnu.org/licenses/>.

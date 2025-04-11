@@ -1,0 +1,49 @@
+#!/bin/bash
+
+# SPDX-License-Identifier: AGPL-3.0-only
+
+set -o pipefail
+
+declare -i status=0
+
+[[ -n $1 ]] && declare -r patchdef=$1 || exit 1
+declare -r bak_ext=$2
+
+unset _PD_DISP_ _PD_TGT_ _PD_ORIG_ _PD_REPL_
+raw() { IFS='' read -d '' -r "$1" ||:; }
+source "$patchdef" 2> /dev/null \
+|| { echo "! Corrupt patch definition: $patchdef" >&2; exit $(( status | 1 )); }
+unset raw
+
+[[ -n $_PD_DISP_ ]] && [[ -n $_PD_TGT_ ]] && [[ -n $_PD_ORIG_ ]] && [[ -n $_PD_REPL_ ]] \
+|| { echo "! Invalid patch definition: $patchdef" >&2; exit $(( status | 1 )); }
+
+[[ -f $_PD_TGT_ ]] \
+|| { echo "! File to patch not present for: $_PD_DISP_" >&2; exit $(( status | 2 )); }
+
+if [[ -n $bak_ext ]]; then
+    cp "$_PD_TGT_"{,."$bak_ext"} 2> /dev/null \
+    || echo "! Unable to make a '.$bak_ext' copy: $_PD_TGT_" >&2
+fi
+
+declare checksum_prior=$(sha512sum "$_PD_TGT_" 2> /dev/null | awk '{print $1}') \
+|| unset checksum_prior
+
+export _PD_ORIG_ _PD_REPL_
+perl -pi -e 'BEGIN { undef $/; $o = quotemeta($ENV{_PD_ORIG_}); $r = $ENV{_PD_REPL_}; } s/$o/$r/;' "$_PD_TGT_" 2> /dev/null \
+|| { echo "! Error during patch application: $_PD_DISP_" >&2; exit $(( status | 2 )); }
+
+declare checksum_after=$(sha512sum "$_PD_TGT_" 2> /dev/null | awk '{print $1}') \
+|| unset checksum_after
+
+if [[ -z $checksum_prior ]] || [[ -z $checksum_after ]]; then
+    echo "? Unknown result: $_PD_DISP_"
+    status=$(( status | 4 ))
+elif [[ $checksum_prior == "$checksum_after" ]]; then
+    echo "- NO effect: $_PD_DISP_"
+    status=$(( status | 8 ))
+else
+    echo "+ OK: $_PD_DISP_"
+fi
+
+exit $status

@@ -1,34 +1,47 @@
 #!/bin/bash
 set -e
 
-pvelist="/etc/apt/sources.list.d/pve-enterprise.list"
-pbslist="/etc/apt/sources.list.d/pbs-enterprise.list"
-proxmoxlib="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js"
-
 case "$1" in
     configure)
-		free-pmx-no-subscription auto-configure || echo "ISSUES reported: $1" >&2
-		free-pmx-no-nag auto-configure || echo "ISSUES reported: $1" >&2
+
+		no-subscription -a || echo "ISSUES reported: $1" >&2
+		no-nag -a || echo "ISSUES reported: $1" >&2
+
     ;;
 
     triggered)
-		case "$2" in
-			"$pvelist")
-				free-pmx-no-subscription auto-triggered-pve || echo "ISSUES reported: $1 $2" >&2
-			;;
-			"$pbslist")
-				free-pmx-no-subscription auto-triggered-pbs || echo "ISSUES reported: $1 $2" >&2
-			;;
-			"$proxmoxlib")
-				free-pmx-no-nag auto-triggered || echo "ISSUES reported: $1 $2" >&2
-			;;
-		esac
+
+        for t in $2; do
+
+            case "$t" in
+
+                "/etc/apt/sources.list.d/pve-enterprise.list"|\
+                "/etc/apt/sources.list.d/pbs-enterprise.list"|\
+                "/etc/apt/sources.list.d/pmg-enterprise.list")
+
+                    no-subscription -at "$t" || echo "ISSUES reported: $1 $2" >&2
+
+                ;;
+
+                "/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js"|\
+                "/usr/share/pve-manager/js/pvemanagerlib.js"|\
+                "/usr/share/javascript/proxmox-backup/js/proxmox-backup-gui.js"|\
+                "/usr/share/javascript/pmg-gui/js/pmgmanagerlib.js")
+
+                    no-nag -at "$t" || echo "ISSUES reported: $1 $2" >&2
+
+                ;;
+
+            esac
+
+        done
+
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)
     ;;
 
-    *)
+    *) 
         echo "ERROR: $0 - unknown argument: $1" >&2
         exit 1
     ;;

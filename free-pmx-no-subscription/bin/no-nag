@@ -1,0 +1,86 @@
+#!/bin/bash
+
+# SPDX-License-Identifier: AGPL-3.0-only
+
+echo
+echo "free-pmx: NO-NAG - 'No Subscription' Nags Removal"
+trap "echo" EXIT
+
+declare -i status=0
+
+source "/usr/lib/free-pmx/no-subscription-common" 2> /dev/null \
+|| { echo "Internal error, aborting." >&2; exit 1; }
+
+init "FREE_PMX_NO_NAG" "$@"
+
+(( ${#ARGS[@]} == 0 )) \
+|| { echo "Arguments not supported." >&2; exit 1; }
+
+{ declare_patchdefs; declare -i err=$?; }
+(( err & 1+2 )) && echo "Warning: Issues parsing some patch definitions."
+
+declare -a targets=()
+
+if [[ -n $O_TARGET ]]; then
+    echo "Explicit target: $O_TARGET"
+    targets+=("$O_TARGET")
+else
+    targets+=("${AVAIL_PATCH_TARGETS[@]}")
+fi
+
+declare -i no_file_count=0
+declare -i no_effect_count=0
+
+for t in "${targets[@]}"; do
+    if [[ -f "$t" ]] || [[ -n "$O_TARGET" ]]; then
+        echo "Patches applicable to: $t ..."
+
+        declare -a todo_ids=()
+        for i in "${ORD_PATCHDEF_IDS[@]}"; do
+            if [[ ${PATCHDEF_TARGETS["$i"]} == "$t" ]]; then todo_ids+=("$i"); fi
+        done
+
+        (( ${#todo_ids[@]} == 0 )) \
+        && { echo "No patch definitions for this target." >&2; status=1; }
+
+        for i in "${!todo_ids[@]}"; do
+            declare bak_ext=""
+            (( i == 0 )) && (( O_AUTORUN == 0 )) && bak_ext="bak"
+            (( i == 0 )) && (( O_AUTORUN == 1 )) && bak_ext="original"
+
+            { run_pd_apply "${PATCHDEF_DIR}/${todo_ids[$i]}.patchdef" "$bak_ext"; declare -i err=$?; }
+            (( err & 2 )) && no_file_count+=1
+            (( err & 8 )) && no_effect_count+=1
+        done    
+    fi    
+done
+
+if (( O_AUTORUN == 0 )) && (( no_file_count > 0 )); then
+    echo
+    echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    echo "NOTICE: Some ($no_file_count) file(s) to patch NOT FOUND."
+    echo
+    echo "It is EXPECTED when running the command MANUALLY with explicit target file ('-t')"
+    echo "that does not exist as not all products are likely installed (PVE, PBS, PMG)."
+fi
+
+if (( O_AUTORUN == 0 )) && (( no_effect_count > 0 )); then
+    echo
+    echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    echo "NOTICE: Some ($no_effect_count) patch(es) had NO EFFECT."
+    echo
+    echo "It is EXPECTED when running the command MANUALLY and also after e.g. RE-INSTALL"
+    echo "of the free-pmx package during an automated run."
+    echo
+    echo "If you are still experiencing undesired artefacts in the web interface,"
+    echo "consider REFRESHING (CTRL+F5) your BROWSER or confirm the issue with ANOTHER."
+fi
+
+if (( O_AUTORUN == 0 )); then
+    echo
+    echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    echo "Visit <https://free-pmx.pages.dev/tools/free-pmx-no-subscription/>"
+    echo "for more details, to check the latest version or to report an issue."
+fi
+
+exit $status

@@ -1,0 +1,28 @@
+# # Patch definition for free-pmx-no-nag
+# Source: pve-manager/www/manager6/dc/NodeView.js
+
+_PD_DISP_="PVE Datacenter Summary Nodes panel - Support column"
+
+_PD_PKG_="pve-manager"
+
+_PD_TGT_="/usr/share/pve-manager/js/pvemanagerlib.js"
+
+raw _PD_ORIG_ << 'EOF'
+	{
+	    header: gettext('Support'),
+	    width: 100,
+	    sortable: true,
+	    dataIndex: 'level',
+	    renderer: PVE.Utils.render_support_level,
+	},
+EOF
+
+raw _PD_REPL_ << 'EOF'
+	{
+	    header: gettext('Support'),
+	    width: 100,
+	    sortable: true,
+	    dataIndex: 'level',
+	    renderer: function() { return gettext('Community') },
+	},
+EOF

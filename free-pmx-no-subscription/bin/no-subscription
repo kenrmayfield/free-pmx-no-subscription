@@ -1,0 +1,96 @@
+#!/bin/bash
+
+# SPDX-License-Identifier: AGPL-3.0-only
+
+echo
+echo "free-pmx: NO-SUBSCRIPTION - 'No Subscription' Repositories Setup"
+trap "echo" EXIT
+
+declare -i status=0
+
+source "/usr/lib/free-pmx/no-subscription-common" 2> /dev/null \
+|| { echo "Internal error, aborting." >&2; exit 1; }
+
+init "FREE_PMX_NO_SUBSCRIPTION" "$@"
+
+declare_apt_lists
+
+{ declare -A todo_id_flags; for i in "${ORD_LIST_IDS[@]}"; do todo_id_flags["$i"]=0; done; }
+
+if [[ -n $O_TARGET ]]; then
+    (( ${#ARGS[@]} == 0 )) \
+    || { echo "Arguments not allowed when used with '-t' option." >&2; exit 1; }
+
+    declare list_id_match=''
+
+    for i in "${!APT_LISTS[@]}"; do
+        [[ $O_TARGET == "${APT_LISTS["$i"]}" ]] \
+        && { list_id_match="$i"; todo_id_flags["$i"]=1; break; }
+    done
+
+    if [[ -n $list_id_match ]]; then
+        echo "Explicit target recognised as $list_id_match: $O_TARGET"
+    else
+        { echo "No defined repositories for this target." >&2; exit 1; }
+    fi
+elif (( ${#ARGS[@]} > 0 )); then
+    for arg in "${ARGS[@]}"; do
+        case "$arg" in
+            pve|pbs|pmg|ceph) todo_id_flags["$arg"]=1;;
+            *) { echo "Invalid argument: $arg" >&2; exit 1; };;
+        esac
+    done
+else
+    echo -n "Detecting default lists ..."
+    for i in "${ORD_LIST_IDS[@]}"; do
+        [[ -f ${APT_LISTS["$i"]} ]] && todo_id_flags["$i"]=1 && echo -n " $i"
+    done
+    echo        
+fi
+
+{ todo_count=0; for i in "${ORD_LIST_IDS[@]}"; do (( todo_count+=todo_id_flags[$i] )); done; }
+done_count=0
+
+if (( todo_count > 0 )); then
+    { declare_ns_repos; declare -i err=$?; }
+    (( err & 1 )) \
+    && { echo "Cannot assemble repository lists, aborting." >&2; exit 1; }
+    (( err & 2 )) && (( todo_id_flags["ceph"] == 1 )) \
+    && { todo_id_flags["ceph"]=0; echo "Ceph codename not configured, skipping ..." >&2; }
+
+    for i in "${ORD_LIST_IDS[@]}"; do
+        (( todo_id_flags["$i"] == 1 )) \
+        && echo "Setting up for $i ..." \
+        && run_rl_replace "${APT_LISTS["$i"]}" "${APT_LISTS_NEW["$i"]}" "${NS_REPOS["$i"]}" \
+        && (( done_count++ ))
+    done
+    (( done_count != todo_count )) && status=1
+
+    echo "Completed total $done_count of $todo_count."
+
+    echo
+
+    echo "Checking for Proxmox release key: $REPOS_KEY_LOCAL ..."
+    run_rk_check "$REPOS_KEY_LOCAL" "$REPOS_KEY_ORIGIN" \
+    || { echo "Failed Proxmox release key check." >&2; status=1; }
+else
+    echo "Nothing to be set up."
+fi
+
+if (( O_AUTORUN == 0 )) && (( done_count > 0 )); then
+    echo
+    echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    echo "NOTICE: Do not forget to perform UPDATE and UPGRADE, e.g.:"
+    echo
+    echo "  apt update"
+    echo "  apt full-upgrade"
+fi
+
+if (( O_AUTORUN == 0 )); then
+    echo
+    echo ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    echo "Visit <https://free-pmx.pages.dev/tools/free-pmx-no-subscription/>"
+    echo "for more details, to check the latest version or to report an issue."
+fi
+
+exit $status
