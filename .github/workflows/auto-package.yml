@@ -1,0 +1,44 @@
+on:
+  push:
+    branch:
+      - main
+env:
+  NAME: "${{ github.event.repository.name }}"
+  MESG: "${{ github.event.head_commit.message }}"
+jobs:
+  build-attest:
+    name: Auto-package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Init
+      run: |
+        HASH="$(git rev-parse --short "$GITHUB_SHA")"        
+        echo "FULLNAME=$NAME.github_$HASH.deb" >> $GITHUB_ENV
+
+        echo "# NOT A RELEASE" >> $GITHUB_STEP_SUMMARY
+        echo "> [!CAUTION]" >> $GITHUB_STEP_SUMMARY
+        echo "> **For reference only** - package has been automatically built within GitHub environment." >> $GITHUB_STEP_SUMMARY
+        echo "> While the contents is expected to be identical to a self-built one, **it has NOT been tested**." >> $GITHUB_STEP_SUMMARY
+        echo "### As of Commit" >> $GITHUB_STEP_SUMMARY
+        echo "$MESG" >> $GITHUB_STEP_SUMMARY
+    - name: Package
+      run: |
+        dpkg-deb --build --root-owner-group "$NAME"
+        mv "$NAME.deb" "$FULLNAME"
+    - name: Artifact
+      id: artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: "${{ env.FULLNAME }}"
+        path: "${{ env.FULLNAME }}"
+    - name: Attestation
+      uses: actions/attest-build-provenance@v2
+      with:
+        subject-name: "${{ env.FULLNAME }}"
+        subject-digest: sha256:${{ steps.artifact.outputs.artifact-digest }}
