@@ -1,4 +1,4 @@
-# Patch definition for free-pmx-no-nag
+# Patch definition for no-nag
 # Source: pmg-gui/js/dashboard/SubscriptionInfo.js
 
 _PD_DISP_="PMG Summary Subscription panel"

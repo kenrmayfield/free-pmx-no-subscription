@@ -17,3 +17,17 @@ License: AGPL-3.0-only
 
  For copy of the GNU Affero General Public License,
  see <https://www.gnu.org/licenses/>.
+
+Files:
+ usr/share/man/*
+Copyright: 2025 free-pmx
+License: GFDL-1.3-only
+ Permission is granted to copy, distribute and/or modify this document
+ under the terms of the GNU Free Documentation License as
+ published by the Free Software Foundation, version 1.3.
+
+ For copy of the GNU Free Documentation License,
+ see <https://www.gnu.org/licenses/>.
+Comment:
+ On Debian systems, the full text of the GNU Free Documentation
+ License can be found in `/usr/share/common-licenses/'.

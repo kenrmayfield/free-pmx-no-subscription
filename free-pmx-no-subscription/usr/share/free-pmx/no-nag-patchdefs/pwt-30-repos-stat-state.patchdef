@@ -1,4 +1,4 @@
-# Patch definition for free-pmx-no-nag
+# Patch definition for no-nag
 # Source: proxmox-widget-toolkit/src/node/APTRepositories.js
 
 _PD_DISP_="Common 'All OK' repos status"
@@ -8,25 +8,25 @@ _PD_PKG_="proxmox-widget-toolkit"
 _PD_TGT_="/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js"
 
 raw _PD_ORIG_ << 'EOF'
-	updateState: function() {
-	    let me = this;
-	    let vm = me.getViewModel();
+        updateState: function () {
+            let me = this;
+            let vm = me.getViewModel();
 
-	    let store = vm.get('errorstore');
-	    store.removeAll();
+            let store = vm.get('errorstore');
+            store.removeAll();
 
-	    let status = 'good'; // start with best, the helper below will downgrade if needed
-	    let text = gettext('All OK, you have production-ready repositories configured!');
+            let status = 'good'; // start with best, the helper below will downgrade if needed
+            let text = gettext('All OK, you have production-ready repositories configured!');
 EOF
 
 raw _PD_REPL_ << 'EOF'
-	updateState: function() {
-	    let me = this;
-	    let vm = me.getViewModel();
+        updateState: function () {
+            let me = this;
+            let vm = me.getViewModel();
 
-	    let store = vm.get('errorstore');
-	    store.removeAll();
+            let store = vm.get('errorstore');
+            store.removeAll();
 
-	    let status = 'good'; // start with best, the helper below will downgrade if needed
-	    let text = gettext('OK');
+            let status = 'good'; // start with best, the helper below will downgrade if needed
+            let text = gettext('OK');
 EOF
