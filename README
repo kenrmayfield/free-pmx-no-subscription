@@ -8,23 +8,21 @@ See also:
 - Download and install <https://free-pmx.pages.dev/tools/free-pmx-no-subscription/>
 - Companion post with more details <https://free-pmx.pages.dev/insights/no-subscription/>
 
-#### Sets No Subscription Repository and Removes No Subscription
+Sets No Subscription Repository and Removes No Subscription
 NAG.
-Download just like any other file, directly onto your host
-first without installing it:
 
+Download:
 wget -P /tmp https://free-pmx.pages.dev/tools/free-pmx-no-subscription_0.3.0~pre1.deb
 
-To install:
+To Install:
 apt install /tmp/free-pmx-no-subscription_0.3.0~pre1.deb
 
-To remove the package:
+To Remove the Package:
 apt remove free-pmx-no-subscription
 
-CEPH:
+CEPH No Subscription NAG and No Subscription Repostiory:
 Edit: /etc/free-pmx/no-subscription.conf:
 
 FREE_PMX_NO_SUBSCRIPTION=<Variable>   # auto | manual | prohibit
 FREE_PMX_NO_NAG=<Variable>            # auto | manual | prohibit
-
 FREE_PMX_CEPH=<Variable>            # actual release name, e.g. quincy, reef, squid
