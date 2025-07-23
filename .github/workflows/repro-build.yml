@@ -1,0 +1,33 @@
+on:
+  workflow_dispatch:
+  push:
+    branch:
+      - main
+    paths:
+      - '*.buildmeta'
+
+env:
+  GIT_URL: "${{ github.repositoryUrl }}"
+  GIT_COMMIT: "${{ github.sha }}"
+  GIT_REF: "${{ github.ref }}"
+
+defaults:
+  run:
+    shell: bash
+    working-directory: repo
+jobs:
+  reproducible-build-check:
+    name: "Reproducible Build"
+    runs-on: ubuntu-latest
+    container: debian:12
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        path: repo
+    - name: Check if build is reproducible
+      run: .github/repro-build/check-build >> $GITHUB_ENV
+    - name: Check if official package digest matches
+      run: .github/repro-build/check-url >> $GITHUB_ENV
+    - name: Report
+      run: .github/repro-build/report >> $GITHUB_STEP_SUMMARY

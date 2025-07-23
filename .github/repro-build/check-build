@@ -1,0 +1,71 @@
+#!/bin/bash
+
+exec 3>&1 1>&2
+trap 'echo "${BASH_SOURCE[0]##*/}: Error $? (l.$LINENO) - aborted."; exit 1;' ERR
+
+out_dir=$(pwd -P)
+cd -P "$(dirname "${BASH_SOURCE[0]}")"
+
+p=$(pwd -P); unset build_meta_fname
+while [[ -z $build_meta_fname ]] && [[ $p != / ]]; do
+    p=$(realpath -s "$p"/..)
+    build_meta_fname=$(find "$p" -maxdepth 1 -mindepth 1 \
+        -type f -name '*.buildmeta' -printf "%f\n")
+done
+
+[[ -n $build_meta_fname ]]
+[[ $(wc -l <<< "$build_meta_fname") == 1 ]]
+
+target="${build_meta_fname%%.buildmeta}"
+package=${target%%_*}
+version=${target#*_}
+
+./req-perms "$p/$package"
+
+source "$p/$build_meta_fname"
+
+export SOURCE_DATE_EPOCH DPKG_DEB_COMPRESSOR_TYPE
+tmp_deb=$(mktemp "$package"_XXXXXX.deb)
+dpkg-deb --build --root-owner-group "$p/$package" "$tmp_deb"
+
+read -r deb_package deb_version <<< "$(
+    dpkg-deb --show --showformat='${Package} ${Version}\n' \
+    "$tmp_deb"
+)"
+
+[[ $package == "$deb_package" ]]
+[[ $version == "$deb_version" ]]
+
+deb_fname="${deb_package}_${deb_version}.deb"
+mv -v "$tmp_deb" "$out_dir/$deb_fname"
+
+deb_info_fname="$deb_fname".info
+
+sha256sum --check <<< "$DEB_SHA256  $out_dir/$deb_fname"
+
+cat >&3 << EOF
+DEB=$out_dir/$deb_fname
+DEB_INFO=$out_dir/$deb_info_fname
+
+EOF
+
+tee "$out_dir/$deb_info_fname" >&3 << EOF
+DEB_PACKAGE=$deb_package
+DEB_VERSION=$deb_version
+
+DEB_SHA256=$DEB_SHA256
+DEB_URL=$DEB_URL
+
+EOF
+
+cat >> "$out_dir/$deb_info_fname" << EOF
+GIT_URL=$GIT_URL
+GIT_COMMIT=$GIT_COMMIT
+GIT_REF=$GIT_REF
+
+EOF
+
+cat >&3 << EOF
+CHECK_BUILD=pass
+
+EOF

@@ -1,0 +1,10 @@
+# .buildmeta file accompanies specific sources in this repository
+# and can be used to:
+#   - prove that the Debian package build is reproducible; and
+#   - verify its digest against officially provided download link.
+
+SOURCE_DATE_EPOCH=1752980252
+DPKG_DEB_COMPRESSOR_TYPE=xz
+
+DEB_SHA256=8902e1651fe3835bbb421f7d778ed2da1c9fdcaca174b2a74205015e86505c69
+DEB_URL=https://free-pmx.pages.dev/tools/free-pmx-no-subscription_0.3.0~pre1.deb
