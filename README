@@ -8,8 +8,9 @@ See also:
 - Download and install <https://free-pmx.pages.dev/tools/free-pmx-no-subscription/>
 - Companion post with more details <https://free-pmx.pages.dev/insights/no-subscription/>
 
-Sets No Subscription Repository and Removes No Subscription
-NAG.
+=========================================================================================
+
+Sets No Subscription Repository and Removes No Subscription NAG
 
 Download:
 wget -P /tmp https://free-pmx.pages.dev/tools/free-pmx-no-subscription_0.3.0~pre1.deb
